@@ -1,0 +1,2 @@
+ALTER TABLE public.settings
+ADD COLUMN IF NOT EXISTS onboarding_step integer DEFAULT 1;
