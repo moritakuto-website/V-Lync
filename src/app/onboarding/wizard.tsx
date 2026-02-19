@@ -10,7 +10,6 @@ import Step1Plan from "./components/step1-plan"
 import Step2ClientInfo from "./components/step2-client-info"
 import Step3Website from "./components/step3-website"
 import Step4Assets from "./components/step4-assets"
-import Step5Complete from "./components/step5-complete"
 import { updateOnboardingStep, completeOnboarding } from "./actions"
 
 interface OnboardingWizardProps {
@@ -20,11 +19,10 @@ interface OnboardingWizardProps {
 }
 
 const steps = [
-    { number: 1, title: "プラン選択", description: "最適なプランを選択" },
-    { number: 2, title: "クライアント情報", description: "会社名と担当者名" },
+    { number: 1, title: "プラン選択", description: "ご利用予定の送信数に応じてプランを選択" },
+    { number: 2, title: "基本情報の登録", description: "会社名と担当者名" },
     { number: 3, title: "URL登録", description: "自社サイトのURL" },
-    { number: 4, title: "素材登録", description: "PDF・動画をアップロード" },
-    { number: 5, title: "完了", description: "設定完了" },
+    { number: 4, title: "営業素材の登録（任意）", description: "PDF・動画をアップロード" },
 ]
 
 export default function OnboardingWizard({ initialStep, isCompleted, savedData }: OnboardingWizardProps) {
@@ -49,7 +47,18 @@ export default function OnboardingWizard({ initialStep, isCompleted, savedData }
             return
         }
 
-        if (currentStep < 5) {
+        // If we just completed step 4, finish onboarding
+        if (currentStep === 4) {
+            const completeResult = await completeOnboarding()
+            if (completeResult && completeResult.error) {
+                alert(completeResult.error)
+                setIsSaving(false)
+            }
+            // Redirection is handled by completeOnboarding server action
+            return
+        }
+
+        if (currentStep < 4) {
             setCurrentStep(currentStep + 1)
         }
 
@@ -67,13 +76,12 @@ export default function OnboardingWizard({ initialStep, isCompleted, savedData }
         setIsSaving(true)
         const result = await completeOnboarding()
 
-        if (result.error) {
+        if (result && result.error) {
             alert(result.error)
             setIsSaving(false)
             return
         }
-
-        router.push('/dashboard')
+        // Redirection is handled by completeOnboarding server action
     }
 
     return (
@@ -167,12 +175,7 @@ export default function OnboardingWizard({ initialStep, isCompleted, savedData }
                             isSaving={isSaving}
                         />
                     )}
-                    {currentStep === 5 && (
-                        <Step5Complete
-                            onComplete={handleComplete}
-                            isSaving={isSaving}
-                        />
-                    )}
+
                 </CardContent>
             </Card>
         </div>

@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Send, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { PLANS } from '@/lib/plans'
 
 export async function DashboardStats() {
     const supabase = await createClient()
@@ -9,8 +10,38 @@ export async function DashboardStats() {
     // Fetch queue stats
     let queuedCount = 0
     let todaySkippedCount = 0
+    let dailyLimit = 100
+    let planName = "Pro"
 
     if (user) {
+        // Fetch profile to get plan_type
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('plan_type')
+            .eq('id', user.id)
+            .single()
+
+        // Fetch settings to get daily_limit
+        const { data: settings } = await supabase
+            .from('settings')
+            .select('daily_limit')
+            .eq('user_id', user.id)
+            .single()
+
+        // Get plan info from centralized PLANS
+        if (profile?.plan_type) {
+            const plan = Object.values(PLANS).find(p => p.id === profile.plan_type)
+            if (plan) {
+                planName = plan.name
+                dailyLimit = plan.dailyLimit
+            }
+        }
+
+        // Fallback to settings.daily_limit if it exists
+        if (settings?.daily_limit) {
+            dailyLimit = settings.daily_limit
+        }
+
         // Count queued items (processing)
         const { count: queued } = await supabase
             .from('sending_queue')
@@ -44,9 +75,9 @@ export async function DashboardStats() {
                         <Send className="h-4 w-4 text-gray-400" />
                     </CardHeader>
                     <CardContent className="pt-1">
-                        <div className="text-3xl font-bold text-gray-900">0<span className="text-xl text-gray-400 font-normal"> / 100</span></div>
+                        <div className="text-3xl font-bold text-gray-900">0<span className="text-xl text-gray-400 font-normal"> / {dailyLimit}</span></div>
                         <p className="text-xs text-gray-500 mt-2">
-                            プラン上限まで残り 100通
+                            プラン上限まで残り {dailyLimit}通
                         </p>
                     </CardContent>
                 </Card>
@@ -95,6 +126,11 @@ export async function DashboardStats() {
                         </p>
                     </CardContent>
                 </Card>
+            </div>
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm font-medium text-blue-900">
+                    現在のプラン：{planName}（1日{dailyLimit}通）
+                </p>
             </div>
             <p className="text-[10px] text-gray-400 text-center pt-1">
                 ※この数値は設定に基づき自動更新されます

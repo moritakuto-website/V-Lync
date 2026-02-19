@@ -26,9 +26,9 @@ export default function Step2ClientInfo({ savedData, onNext, onBack, isSaving }:
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-                <h2 className="text-xl font-semibold text-gray-900">クライアント情報を入力してください</h2>
+                <h2 className="text-xl font-semibold text-gray-900">基本情報を入力してください</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                    メール送信時の表示名に使用されます
+                    営業メールに表示される会社情報を入力してください。
                 </p>
             </div>
 

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { updateSettings } from './actions'
 import { ApiKeyForm } from "@/components/settings/api-key-form"
+import { PLANS } from '@/lib/plans'
 
 export default async function SettingsContent() {
     const supabase = await createClient()
@@ -68,8 +69,11 @@ export default async function SettingsContent() {
                                         defaultValue={profile?.plan_type || 'free'}
                                         required
                                     >
-                                        <option value="free">Free Plan</option>
-                                        <option value="pro">Pro Plan</option>
+                                        {Object.values(PLANS).map(plan => (
+                                            <option key={plan.id} value={plan.id}>
+                                                {plan.name} - ¥{plan.price.toLocaleString()}/月 (1日{plan.dailyLimit}通)
+                                            </option>
+                                        ))}
                                         <option value="unlimited_free">Admin / Unlimited</option>
                                     </select>
                                     <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
@@ -190,7 +194,9 @@ export default async function SettingsContent() {
                             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
                                 <span className="text-sm font-medium">プラン</span>
                                 <span className="text-sm font-semibold text-gray-900">
-                                    {profile?.plan_type === 'pro' ? 'Pro Plan' : 'Free Plan'}
+                                    {profile?.plan_type && Object.values(PLANS).find(p => p.id === profile.plan_type)
+                                        ? `${Object.values(PLANS).find(p => p.id === profile.plan_type)?.name} (1日${Object.values(PLANS).find(p => p.id === profile.plan_type)?.dailyLimit}通)`
+                                        : profile?.plan_type || 'Not Set'}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { PLANS } from "@/lib/plans"
 
 interface Step1PlanProps {
     savedData: any
@@ -12,35 +13,8 @@ interface Step1PlanProps {
     isSaving: boolean
 }
 
-const plans = [
-    {
-        id: "free",
-        name: "Free Plan",
-        price: "¥0",
-        period: "/月",
-        features: [
-            "毎日10通まで自動送信",
-            "基本的な配信停止管理",
-            "標準サポート",
-        ],
-    },
-    {
-        id: "pro",
-        name: "Pro Plan",
-        price: "¥29,800",
-        period: "/月",
-        features: [
-            "毎日100通まで自動送信",
-            "反応率による自動最適化",
-            "除外・補完の自動化",
-            "優先サポート",
-        ],
-        recommended: true,
-    },
-]
-
 export default function Step1Plan({ savedData, onNext, isSaving }: Step1PlanProps) {
-    const [selectedPlan, setSelectedPlan] = useState(savedData?.plan_type || "free")
+    const [selectedPlan, setSelectedPlan] = useState(savedData?.plan_type || "standard")
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -50,14 +24,14 @@ export default function Step1Plan({ savedData, onNext, isSaving }: Step1PlanProp
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-                <h2 className="text-xl font-semibold text-gray-900">プランを選択してください</h2>
+                <h2 className="text-xl font-semibold text-gray-900">プランを選択</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                    後からいつでも変更できます
+                    ご利用予定の送信数に応じてプランを選択してください。後から変更可能です。
                 </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-                {plans.map((plan) => (
+                {Object.values(PLANS).map((plan) => (
                     <button
                         key={plan.id}
                         type="button"
@@ -71,7 +45,12 @@ export default function Step1Plan({ savedData, onNext, isSaving }: Step1PlanProp
                     >
                         {plan.recommended && (
                             <div className="absolute -top-3 left-4 px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
-                                おすすめ
+                                推奨
+                            </div>
+                        )}
+                        {plan.popular && (
+                            <div className="absolute -top-3 right-4 px-3 py-1 bg-purple-600 text-white text-xs font-semibold rounded-full">
+                                人気
                             </div>
                         )}
                         {selectedPlan === plan.id && (
@@ -84,19 +63,18 @@ export default function Step1Plan({ savedData, onNext, isSaving }: Step1PlanProp
                         <div className="space-y-4">
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
-                                <div className="mt-2 flex items-baseline">
-                                    <span className="text-3xl font-bold text-gray-900">{plan.price}</span>
-                                    <span className="text-sm text-gray-500 ml-1">{plan.period}</span>
+                                <p className="text-xs text-gray-500 mt-1">{plan.label}</p>
+                                <div className="mt-3 flex items-baseline">
+                                    <span className="text-3xl font-bold text-gray-900">¥{plan.price.toLocaleString()}</span>
+                                    <span className="text-sm text-gray-500 ml-1">/ 月</span>
                                 </div>
                             </div>
-                            <ul className="space-y-2">
-                                {plan.features.map((feature, index) => (
-                                    <li key={index} className="flex items-start text-sm text-gray-600">
-                                        <Check className="h-4 w-4 text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
-                                        <span>{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                            <div className="pt-2 border-t border-gray-200">
+                                <p className="text-sm text-gray-700 font-medium">
+                                    <Check className="h-4 w-4 text-blue-600 inline mr-1" />
+                                    1日{plan.dailyLimit}通まで
+                                </p>
+                            </div>
                         </div>
                     </button>
                 ))}

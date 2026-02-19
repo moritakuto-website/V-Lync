@@ -78,9 +78,9 @@ export default function Step4Assets({ savedData, onNext, onBack, isSaving }: Ste
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-                <h2 className="text-xl font-semibold text-gray-900">素材をアップロードしてください</h2>
+                <h2 className="text-xl font-semibold text-gray-900">営業素材を登録してください（任意）</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                    メール添付用のPDFとサンプル動画をアップロードします
+                    営業メールに添付するPDF資料や動画を登録できます。後から追加も可能です。
                 </p>
             </div>
 

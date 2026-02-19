@@ -37,7 +37,7 @@ export default function Step3Website({ savedData, onNext, onBack, isSaving }: St
             <div>
                 <h2 className="text-xl font-semibold text-gray-900">自社URLを登録してください</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                    メール本文に記載されます
+                    営業メール本文に記載される自社サイトのURLです。
                 </p>
             </div>
 

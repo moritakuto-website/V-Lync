@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { PLANS } from '@/lib/plans'
 
 export async function updateOnboardingStep(step: number, data: any) {
     const supabase = await createClient()
@@ -47,15 +48,25 @@ export async function updateOnboardingStep(step: number, data: any) {
         }
     }
 
-    // Update settings with onboarding step
-    // Using upsert to handle case where settings row might not exist yet
+    // Prepare settings update
+    const settingsUpdates: any = {
+        user_id: user.id,
+        onboarding_step: step,
+        updated_at: new Date().toISOString()
+    }
+
+    // If plan is selected, also save the corresponding daily_limit
+    if (data.plan_type) {
+        const selectedPlan = Object.values(PLANS).find(p => p.id === data.plan_type)
+        if (selectedPlan) {
+            settingsUpdates.daily_limit = selectedPlan.dailyLimit
+        }
+    }
+
+    // Update settings with onboarding step and daily_limit
     const { error: settingsError } = await supabase
         .from('settings')
-        .upsert({
-            user_id: user.id,
-            onboarding_step: step,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' })
+        .upsert(settingsUpdates, { onConflict: 'user_id' })
 
     if (settingsError) {
         console.error('Error updating settings:', settingsError)
@@ -119,7 +130,7 @@ export async function uploadAsset(formData: FormData, assetType: 'pdf' | 'video'
             user_id: user.id,
             [columnName]: uploadData.path,
             updated_at: new Date().toISOString()
-        })
+        }, { onConflict: 'user_id' })
 
     if (settingsError) {
         console.error('Error saving asset path:', settingsError)
@@ -130,6 +141,8 @@ export async function uploadAsset(formData: FormData, assetType: 'pdf' | 'video'
     return { success: true, path: uploadData.path }
 }
 
+import { redirect } from 'next/navigation'
+
 export async function completeOnboarding() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -137,6 +150,7 @@ export async function completeOnboarding() {
     if (!user) return { error: 'Not authenticated' }
 
     // Explicitly update both progress markers for stability
+    // Ensure onboarding_step is 5 and onboarding_completed is true
     const { error } = await supabase
         .from('settings')
         .upsert({
@@ -157,5 +171,8 @@ export async function completeOnboarding() {
     revalidatePath('/onboarding')
     revalidatePath('/dashboard')
     revalidatePath('/settings')
-    return { success: true }
+
+    // Perform redirect to dashboard
+    redirect('/dashboard')
 }
+
