@@ -17,6 +17,7 @@ export async function updateSettings(formData: FormData) {
         const company_url = formData.get('company_url') as string
         const reply_email = formData.get('reply_email') as string
         const plan_type = formData.get('plan_type') as string
+        const sending_enabled = formData.get('sending_enabled') === 'on'
 
         const { error } = await supabase
             .from('profiles')
@@ -26,6 +27,7 @@ export async function updateSettings(formData: FormData) {
                 company_url,
                 reply_email,
                 plan_type,
+                sending_enabled,
                 updated_at: new Date().toISOString()
             })
             .eq('id', user.id)

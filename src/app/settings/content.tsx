@@ -81,6 +81,27 @@ export default async function SettingsContent() {
                                     </div>
                                 </div>
                             </div>
+                            {/* Emergency Stop Toggle */}
+                            <div className="grid gap-2 col-span-full mt-2">
+                                <div className="flex items-center gap-3">
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            name="sending_enabled"
+                                            id="sending_enabled"
+                                            className="sr-only peer"
+                                            defaultChecked={profile?.sending_enabled !== false}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                    <Label htmlFor="sending_enabled" className="cursor-pointer">自動送信 (ON/OFF)</Label>
+                                </div>
+                                {profile?.sending_enabled === false && (
+                                    <p className="text-sm font-medium text-red-600">
+                                        ※送信を一時停止中です。ONに戻すまで自動送信は行われません。
+                                    </p>
+                                )}
+                            </div>
                         </CardContent>
                         {/* Read-only Info Section */}
                         <CardContent className="border-t pt-4 mt-2 bg-muted/20">
