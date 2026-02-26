@@ -1,4 +1,16 @@
-export const PLANS = {
+export type PlanId = "starter" | "standard" | "pro" | "max";
+
+export type Plan = {
+    id: PlanId;
+    name: string;
+    price: number;
+    dailyLimit: number;
+    label: string;
+    recommended?: boolean;
+    popular?: boolean;
+};
+
+export const PLANS: Record<PlanId, Plan> = {
     starter: {
         id: "starter",
         name: "Starter",
@@ -29,7 +41,4 @@ export const PLANS = {
         dailyLimit: 200,
         label: "大規模運用",
     },
-} as const
-
-export type PlanId = keyof typeof PLANS
-export type Plan = typeof PLANS[PlanId]
+};
