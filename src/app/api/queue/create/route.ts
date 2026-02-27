@@ -10,13 +10,23 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user has reply_email configured
+    // Fetch profile (sending_enabled + reply_email)
     const { data: profile } = await supabase
         .from('profiles')
-        .select('reply_email')
+        .select('reply_email, sending_enabled')
         .eq('id', user.id)
         .single()
 
+    // Gate: if sending is disabled, return early without creating any queue items
+    if (profile?.sending_enabled === false) {
+        return NextResponse.json({
+            success: true,
+            reason: 'sending_disabled',
+            stats: { total: 0, queued: 0, skipped: 0, skip_reasons: { no_email: 0, opt_out: 0 } }
+        })
+    }
+
+    // Check if user has reply_email configured (only required when sending is enabled)
     if (!profile?.reply_email) {
         return NextResponse.json(
             {
