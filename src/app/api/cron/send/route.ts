@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { generateUnsubscribeToken } from '@/utils/unsubscribe-token'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +62,6 @@ export async function GET(req: NextRequest) {
     )
     const resend = new Resend(process.env.RESEND_API_KEY!)
     const appBase = process.env.APP_BASE_URL ?? 'https://v-lync.vercel.app'
-    const unsubSecret = process.env.UNSUB_SECRET ?? ''
 
     let processed = 0
     let skipped = 0
@@ -132,13 +132,9 @@ export async function GET(req: NextRequest) {
                     continue
                 }
 
-                // 4. Build unsub token
-                const ts = Math.floor(Date.now() / 1000)
-                const crypto = await import('crypto')
-                const raw = `${toEmail.toLowerCase()}.${ts}`
-                const sig = crypto.createHmac('sha256', unsubSecret).update(raw).digest('base64url')
-                const token = Buffer.from(`${toEmail.toLowerCase()}.${ts}.${sig}`).toString('base64url')
-                const unsubUrl = `${appBase}/unsub?token=${token}`
+                // 4. Build unsub token — generateUnsubscribeToken() is the sole source
+                const token = generateUnsubscribeToken(toEmail)
+                const unsubUrl = `${appBase}/unsubscribe?token=${encodeURIComponent(token)}`
 
                 // 5. Send email
                 try {

@@ -1,73 +1,71 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, XCircle } from "lucide-react"
-import { verifyUnsubscribeToken, normalizeEmail } from '@/utils/unsubscribe-token'
+import { verifyUnsubscribeTokenDetailed } from '@/utils/unsubscribe-token'
+
+type SP = { token?: string;[key: string]: string | string[] | undefined }
 
 export default async function UnsubscribePage({
     searchParams,
 }: {
-    searchParams: { [key: string]: string | string[] | undefined }
+    searchParams: Promise<SP>
 }) {
-    const client_id = searchParams.client_id as string
-    const email = searchParams.email as string
-    const token = searchParams.token as string
+    const sp = await searchParams
+    const token = typeof sp.token === 'string' ? sp.token.trim() : ''
 
-    if (!client_id || !email || !token) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-                <Card className="max-w-md w-full">
-                    <CardHeader className="text-center">
-                        <XCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-                        <CardTitle>無効なリンクです</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center text-muted-foreground">
-                        URLが正しくありません。メール内のリンクを再度ご確認ください。
-                    </CardContent>
-                </Card>
-            </div>
-        )
+    // ── searchParams診断 ──────────────────────────────────────────────────────
+    console.debug('[unsub:page]', JSON.stringify({
+        stage: 'searchParams',
+        hasToken: token.length > 0,
+        tokenLen: token.length,
+        spKeys: Object.keys(sp),
+    }))
+
+    if (!token) {
+        return <InvalidLink message="URLが正しくありません。メール内のリンクを再度ご確認ください。" reason="missing_token" />
     }
 
-    // Normalize email and verify token
-    const normalizedEmail = normalizeEmail(email)
-    let isTokenValid = false
+    // ── Token検証 ─────────────────────────────────────────────────────────────
+    const result = verifyUnsubscribeTokenDetailed(token)
 
-    try {
-        isTokenValid = verifyUnsubscribeToken(client_id, normalizedEmail, token)
-    } catch (error) {
-        console.error('Token verification error:', error)
-        isTokenValid = false
+    if (!result.ok) {
+        return <InvalidLink
+            message="このリンクは無効または期限切れです。"
+            reason={result.reason}
+        />
     }
 
-    if (!isTokenValid) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-                <Card className="max-w-md w-full">
-                    <CardHeader className="text-center">
-                        <XCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-                        <CardTitle>無効なリンクです</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-center text-muted-foreground">
-                        このリンクは無効です。セキュリティトークンが一致しません。
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
+    const email = result.email
 
-    const supabase = await createClient()
+    // ── DB Insert ─────────────────────────────────────────────────────────────
+    const supabase = createClient(
+        process.env.SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-    // Record unsubscribe with verified token
-    const { error } = await supabase
+    // べき等: 既に登録済みなら成功扱い
+    const { data: existing } = await supabase
         .from('unsubscribes')
-        .upsert({
-            user_id: client_id,
-            email: normalizedEmail,
-            token: token,
-            created_at: new Date().toISOString()
-        }, { onConflict: 'user_id, email' })
+        .select('email')
+        .eq('email', email)
+        .limit(1)
+        .maybeSingle()
 
-    const isSuccess = !error
+    let isSuccess = true
+    if (!existing) {
+        const { error } = await supabase
+            .from('unsubscribes')
+            .insert({ email, token, created_at: new Date().toISOString() })
+
+        if (error) {
+            console.debug('[unsub:page]', JSON.stringify({ stage: 'db_insert', error: error.message }))
+            isSuccess = false
+        } else {
+            console.debug('[unsub:page]', JSON.stringify({ stage: 'db_insert', status: 'ok' }))
+        }
+    } else {
+        console.debug('[unsub:page]', JSON.stringify({ stage: 'db_insert', status: 'already_exists' }))
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -83,13 +81,31 @@ export default async function UnsubscribePage({
                 <CardContent className="text-center text-muted-foreground">
                     {isSuccess ? (
                         <div>
-                            <p className="font-medium">{normalizedEmail} への配信を停止しました。</p>
-                            <p className="mt-3 text-sm">このクライアントからの配信のみ停止されました。</p>
+                            <p className="font-medium">{email} への配信を停止しました。</p>
+                            <p className="mt-3 text-sm">今後このアドレスへの送信はスキップされます。</p>
                             <p className="mt-2 text-xs">ご利用ありがとうございました。</p>
                         </div>
                     ) : (
                         <p>処理中にエラーが発生しました。<br />時間をおいて再度お試しください。</p>
                     )}
+                </CardContent>
+            </Card>
+        </div>
+    )
+}
+
+// ── Error UI ──────────────────────────────────────────────────────────────────
+function InvalidLink({ message, reason }: { message: string; reason: string }) {
+    // reason はサーバーログ済みなのでここでは表示しない
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+            <Card className="max-w-md w-full">
+                <CardHeader className="text-center">
+                    <XCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+                    <CardTitle>無効なリンクです</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center text-muted-foreground">
+                    {message}
                 </CardContent>
             </Card>
         </div>
